@@ -1,15 +1,26 @@
 import { Connection } from './Connections/Connection';
 import { MySqlConnection } from './Connections/MySqlConnection';
 
+type DriverFactory = (config: any) => Connection;
 export class DatabaseManager {
     protected config: any;
     protected connections: Map<string, Connection> = new Map();
+    protected customCreators: Map<string, DriverFactory> = new Map();
 
     constructor(config: any) {
         this.config = config;
+        
+        // Register default drivers
+        this.extend('mysql', (config) => new MySqlConnection(config));
     }
 
-    public connection(name?: string): Connection {
+    // Allow extending the manager with new drivers
+    public extend(driver: string, callback: DriverFactory): this {
+        this.customCreators.set(driver, callback);
+        return this;
+    }
+
+    public connection(name: string = 'mysql'): Connection {
         const connName = name || this.config.default;
 
         if (!this.connections.has(connName)) {
@@ -26,26 +37,15 @@ export class DatabaseManager {
             throw new Error(`Database connection [${name}] not configured.`);
         }
 
-        switch (dbConfig.driver) {
-            case 'mysql':
-                return new MySqlConnection(dbConfig);
-            case 'postgres':
-                throw new Error('Postgres driver not implemented yet.');
-            case 'sqlite':
-                throw new Error('SQLite driver not implemented yet.');
-            default:
-                throw new Error(`Unsupported database driver [${dbConfig.driver}].`);
+        const creator = this.customCreators.get(dbConfig.driver);
+        if (!creator) {
+            throw new Error(`Unsupported database driver [${dbConfig.driver}].`);
         }
+
+        return creator(dbConfig);
     }
 
-    public driver(name?: string): Connection {
-        return this.connection(name);
-    }
-
-    public connect(name?: string): Connection {
-        return this.connection(name);
-    }
-
+    // Dynamic proxy to forward calls to the default connection (e.g., DB.table('users'))
     public table(table: string) {
         return this.connection().table(table);
     }

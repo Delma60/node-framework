@@ -3,6 +3,7 @@ import mysql from 'mysql2/promise';
 
 export class Connection extends BaseConnection {
     private pool: any;
+    protected inTransaction: boolean = false;
 
     // 🚀 NEW: Accept the specific connection config (e.g., the mysql object)
     constructor(config: any) {
@@ -95,7 +96,7 @@ export class Connection extends BaseConnection {
 
     // --- Helpers ---
 
-    private logQuery(sql: string, bindings: any[]): void {
+    protected logQuery(sql: string, bindings: any[]): void {
         let logQuery = sql;
         bindings.forEach(binding => {
             const value = typeof binding === 'string' ? `'${binding}'` : binding;

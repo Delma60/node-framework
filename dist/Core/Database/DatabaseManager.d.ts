@@ -1,12 +1,13 @@
 import { Connection } from './Connections/Connection';
+type DriverFactory = (config: any) => Connection;
 export declare class DatabaseManager {
     protected config: any;
     protected connections: Map<string, Connection>;
+    protected customCreators: Map<string, DriverFactory>;
     constructor(config: any);
+    extend(driver: string, callback: DriverFactory): this;
     connection(name?: string): Connection;
     protected makeConnection(name: string): Connection;
-    driver(name?: string): Connection;
-    connect(name?: string): Connection;
     table(table: string): import("./QueryBuilder").QueryBuilder;
     query(sql: string, bindings?: any[]): Promise<any>;
     select(sql: string, bindings?: any[]): Promise<any[]>;
@@ -17,4 +18,5 @@ export declare class DatabaseManager {
     commit(): Promise<void>;
     rollBack(): Promise<void>;
 }
+export {};
 //# sourceMappingURL=DatabaseManager.d.ts.map

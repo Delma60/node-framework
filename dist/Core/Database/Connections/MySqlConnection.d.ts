@@ -1,6 +1,7 @@
 import { Connection } from './Connection';
 export declare class MySqlConnection extends Connection {
     private pool;
+    private transactionConnection;
     constructor(config: any);
     query(sql: string, bindings?: any[]): Promise<any>;
     select(sql: string, bindings?: any[]): Promise<any[]>;
@@ -11,6 +12,5 @@ export declare class MySqlConnection extends Connection {
     commit(): Promise<void>;
     rollBack(): Promise<void>;
     getRawConnection(): any;
-    private logQuery;
 }
 //# sourceMappingURL=MySqlConnection.d.ts.map

@@ -11,9 +11,9 @@ export interface IQueryBuilder {
     leftJoin(table: string, first: string, operator: string, second: string): this;
     rightJoin(table: string, first: string, operator: string, second: string): this;
 
-    // --- Basic Wheres ---
-    where(column: string, operatorOrValue: any, value?: any): this;
-    orWhere(column: string, operatorOrValue: any, value?: any): this;
+    // --- Basic Wheres (supports closures for nested conditions) ---
+    where(column: string | ((query: IQueryBuilder) => void), operatorOrValue?: any, value?: any): this;
+    orWhere(column: string | ((query: IQueryBuilder) => void), operatorOrValue?: any, value?: any): this;
     
     // --- Advanced Wheres ---
     whereIn(column: string, values: any[]): this;
@@ -47,7 +47,7 @@ export interface IQueryBuilder {
 
     // --- Execution (Write) ---
     insert(data: Record<string, any> | Record<string, any>[]): Promise<boolean>;
-    insertGetId(data: Record<string, any>): Promise<number>; // Specific for auto-increment returns
+    insertGetId(data: Record<string, any>): Promise<number>; // Returns auto-increment ID
     update(data: Record<string, any>): Promise<number>;      // Returns affected rows
     delete(): Promise<number>;                               // Returns affected rows
 }

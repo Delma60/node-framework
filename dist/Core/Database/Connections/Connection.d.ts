@@ -3,11 +3,10 @@ export declare abstract class Connection {
     protected config: any;
     protected inTransaction: boolean;
     constructor(config: any);
-    /**
-     * Begin a fluent query against a database table.
-     */
     table(table: string): QueryBuilder;
     getDriverName(): string;
+    protected logQuery(sql: string, bindings: any[]): void;
+    getName(): any;
     abstract getRawConnection(): any;
     abstract query(sql: string, bindings?: any[]): Promise<any>;
     abstract select(sql: string, bindings?: any[]): Promise<any[]>;

@@ -4,8 +4,9 @@ import { Controller } from "./Controller";
 
 export class UserController extends Controller {
     public async index(request: Request) {
-        const all = request.all()
         const users = await DB.table('users').first();
+        const connection = DB.connection().getName();
+        console.log(`Using connection: ${connection}`);
         return users;
     }
 
@@ -14,7 +15,6 @@ export class UserController extends Controller {
             name: 'required|string',
         });
         
-
         return `User created with name: ${data.name}`;
     }
 }

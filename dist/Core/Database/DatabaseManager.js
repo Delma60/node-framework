@@ -5,10 +5,18 @@ const MySqlConnection_1 = require("./Connections/MySqlConnection");
 class DatabaseManager {
     config;
     connections = new Map();
+    customCreators = new Map();
     constructor(config) {
         this.config = config;
+        // Register default drivers
+        this.extend('mysql', (config) => new MySqlConnection_1.MySqlConnection(config));
     }
-    connection(name) {
+    // Allow extending the manager with new drivers
+    extend(driver, callback) {
+        this.customCreators.set(driver, callback);
+        return this;
+    }
+    connection(name = 'mysql') {
         const connName = name || this.config.default;
         if (!this.connections.has(connName)) {
             this.connections.set(connName, this.makeConnection(connName));
@@ -20,23 +28,13 @@ class DatabaseManager {
         if (!dbConfig) {
             throw new Error(`Database connection [${name}] not configured.`);
         }
-        switch (dbConfig.driver) {
-            case 'mysql':
-                return new MySqlConnection_1.MySqlConnection(dbConfig);
-            case 'postgres':
-                throw new Error('Postgres driver not implemented yet.');
-            case 'sqlite':
-                throw new Error('SQLite driver not implemented yet.');
-            default:
-                throw new Error(`Unsupported database driver [${dbConfig.driver}].`);
+        const creator = this.customCreators.get(dbConfig.driver);
+        if (!creator) {
+            throw new Error(`Unsupported database driver [${dbConfig.driver}].`);
         }
+        return creator(dbConfig);
     }
-    driver(name) {
-        return this.connection(name);
-    }
-    connect(name) {
-        return this.connection(name);
-    }
+    // Dynamic proxy to forward calls to the default connection (e.g., DB.table('users'))
     table(table) {
         return this.connection().table(table);
     }

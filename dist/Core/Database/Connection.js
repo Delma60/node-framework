@@ -8,6 +8,7 @@ const Connection_1 = require("./Connections/Connection");
 const promise_1 = __importDefault(require("mysql2/promise"));
 class Connection extends Connection_1.Connection {
     pool;
+    inTransaction = false;
     // 🚀 NEW: Accept the specific connection config (e.g., the mysql object)
     constructor(config) {
         super(config);

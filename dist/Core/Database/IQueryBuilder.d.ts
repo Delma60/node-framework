@@ -5,8 +5,8 @@ export interface IQueryBuilder {
     join(table: string, first: string, operator: string, second: string): this;
     leftJoin(table: string, first: string, operator: string, second: string): this;
     rightJoin(table: string, first: string, operator: string, second: string): this;
-    where(column: string, operatorOrValue: any, value?: any): this;
-    orWhere(column: string, operatorOrValue: any, value?: any): this;
+    where(column: string | ((query: IQueryBuilder) => void), operatorOrValue?: any, value?: any): this;
+    orWhere(column: string | ((query: IQueryBuilder) => void), operatorOrValue?: any, value?: any): this;
     whereIn(column: string, values: any[]): this;
     whereNotIn(column: string, values: any[]): this;
     whereNull(column: string): this;

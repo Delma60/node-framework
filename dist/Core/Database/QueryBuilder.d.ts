@@ -1,12 +1,20 @@
 import { Connection } from './Connections/Connection';
 import { IQueryBuilder } from './IQueryBuilder';
+type WhereClause = {
+    type: 'Basic' | 'Nested' | 'In' | 'NotIn' | 'Null' | 'NotNull';
+    boolean: 'AND' | 'OR';
+    sql?: string;
+    query?: QueryBuilder;
+};
 export declare class QueryBuilder implements IQueryBuilder {
     protected connection: Connection;
     protected tableName: string;
     protected selects: string[];
     protected joins: string[];
-    protected wheres: string[];
-    protected whereBindings: any[];
+    protected wheres: WhereClause[];
+    protected bindings: {
+        where: any[];
+    };
     protected groupByColumns: string[];
     protected havings: string[];
     protected orderByColumns: string[];
@@ -19,8 +27,9 @@ export declare class QueryBuilder implements IQueryBuilder {
     join(table: string, first: string, operator: string, second: string): this;
     leftJoin(table: string, first: string, operator: string, second: string): this;
     rightJoin(table: string, first: string, operator: string, second: string): this;
-    where(column: string, operatorOrValue: any, value?: any): this;
-    orWhere(column: string, operatorOrValue: any, value?: any): this;
+    where(column: string | ((query: QueryBuilder) => void), operatorOrValue?: any, value?: any, boolean?: 'AND' | 'OR'): this;
+    orWhere(column: string | ((query: QueryBuilder) => void), operatorOrValue?: any, value?: any): this;
+    getBindings(): any[];
     whereIn(column: string, values: any[]): this;
     whereNotIn(column: string, values: any[]): this;
     whereNull(column: string): this;
@@ -41,11 +50,13 @@ export declare class QueryBuilder implements IQueryBuilder {
     min(column: string): Promise<number>;
     avg(column: string): Promise<number>;
     sum(column: string): Promise<number>;
+    protected aggregate(fn: string, column: string): Promise<number>;
     insert(data: Record<string, any> | Record<string, any>[]): Promise<boolean>;
     insertGetId(data: Record<string, any>): Promise<number>;
     update(data: Record<string, any>): Promise<number>;
     delete(): Promise<number>;
+    protected compileWheres(wheres: WhereClause[]): string;
     protected buildSelectSQL(): string;
-    protected buildAggregateSQL(aggregate: string): string;
 }
+export {};
 //# sourceMappingURL=QueryBuilder.d.ts.map

@@ -7,7 +7,7 @@ class QueryBuilder {
     selects = ['*'];
     joins = [];
     wheres = [];
-    whereBindings = [];
+    bindings = { where: [] };
     groupByColumns = [];
     havings = [];
     orderByColumns = [];
@@ -44,55 +44,56 @@ class QueryBuilder {
         return this;
     }
     // --- Basic Wheres ---
-    where(column, operatorOrValue, value) {
-        // If 3 arguments: where('id', '=', 5)
-        // If 2 arguments: where('id', 5) - defaults to '='
+    where(column, operatorOrValue, value, boolean = 'AND') {
+        // Handle nested closure: where(q => q.where('a', 1).orWhere('b', 2))
+        if (typeof column === 'function') {
+            const nestedQuery = new QueryBuilder(this.connection);
+            column(nestedQuery);
+            this.wheres.push({ type: 'Nested', boolean, query: nestedQuery });
+            this.bindings.where.push(...nestedQuery.getBindings());
+            return this;
+        }
         if (value === undefined) {
             value = operatorOrValue;
             operatorOrValue = '=';
         }
-        this.wheres.push(`${column} ${operatorOrValue} ?`);
-        this.whereBindings.push(value);
+        this.wheres.push({ type: 'Basic', boolean, sql: `${column} ${operatorOrValue} ?` });
+        this.bindings.where.push(value);
         return this;
     }
     orWhere(column, operatorOrValue, value) {
-        // If 3 arguments: orWhere('id', '=', 5)
-        // If 2 arguments: orWhere('id', 5) - defaults to '='
-        if (value === undefined) {
-            value = operatorOrValue;
-            operatorOrValue = '=';
-        }
-        this.wheres.push(`OR ${column} ${operatorOrValue} ?`);
-        this.whereBindings.push(value);
-        return this;
+        return this.where(column, operatorOrValue, value, 'OR');
+    }
+    getBindings() {
+        return this.bindings.where;
     }
     // --- Advanced Wheres ---
     whereIn(column, values) {
         if (values.length === 0) {
-            this.wheres.push('1 = 0'); // Always false if empty
+            this.wheres.push({ type: 'In', boolean: 'AND', sql: '1 = 0' });
             return this;
         }
         const placeholders = values.map(() => '?').join(', ');
-        this.wheres.push(`${column} IN (${placeholders})`);
-        this.whereBindings.push(...values);
+        this.wheres.push({ type: 'In', boolean: 'AND', sql: `${column} IN (${placeholders})` });
+        this.bindings.where.push(...values);
         return this;
     }
     whereNotIn(column, values) {
         if (values.length === 0) {
-            this.wheres.push('1 = 1'); // Always true if empty
+            this.wheres.push({ type: 'NotIn', boolean: 'AND', sql: '1 = 1' });
             return this;
         }
         const placeholders = values.map(() => '?').join(', ');
-        this.wheres.push(`${column} NOT IN (${placeholders})`);
-        this.whereBindings.push(...values);
+        this.wheres.push({ type: 'NotIn', boolean: 'AND', sql: `${column} NOT IN (${placeholders})` });
+        this.bindings.where.push(...values);
         return this;
     }
     whereNull(column) {
-        this.wheres.push(`${column} IS NULL`);
+        this.wheres.push({ type: 'Null', boolean: 'AND', sql: `${column} IS NULL` });
         return this;
     }
     whereNotNull(column) {
-        this.wheres.push(`${column} IS NOT NULL`);
+        this.wheres.push({ type: 'NotNull', boolean: 'AND', sql: `${column} IS NOT NULL` });
         return this;
     }
     // --- Grouping & Ordering ---
@@ -130,7 +131,7 @@ class QueryBuilder {
     // --- Execution (Read) ---
     async get() {
         const sql = this.buildSelectSQL();
-        return this.connection.select(sql, this.whereBindings);
+        return this.connection.select(sql, this.bindings.where);
     }
     async first() {
         const results = await this.limit(1).get();
@@ -145,24 +146,32 @@ class QueryBuilder {
     }
     // --- Execution (Aggregates) ---
     async count(column = '*') {
-        const result = await this.connection.select(this.buildAggregateSQL(`COUNT(${column})`), this.whereBindings);
-        return parseInt(result[0]?.count || 0, 10);
+        return this.aggregate('COUNT', column);
     }
     async max(column) {
-        const result = await this.connection.select(this.buildAggregateSQL(`MAX(${column})`), this.whereBindings);
-        return result[0]?.max || 0;
+        return this.aggregate('MAX', column);
     }
     async min(column) {
-        const result = await this.connection.select(this.buildAggregateSQL(`MIN(${column})`), this.whereBindings);
-        return result[0]?.min || 0;
+        return this.aggregate('MIN', column);
     }
     async avg(column) {
-        const result = await this.connection.select(this.buildAggregateSQL(`AVG(${column})`), this.whereBindings);
-        return result[0]?.avg || 0;
+        return this.aggregate('AVG', column);
     }
     async sum(column) {
-        const result = await this.connection.select(this.buildAggregateSQL(`SUM(${column})`), this.whereBindings);
-        return result[0]?.sum || 0;
+        return this.aggregate('SUM', column);
+    }
+    async aggregate(fn, column) {
+        // Alias the result as "aggregate" so we can easily access it across all databases
+        const selectSql = `${fn}(${column}) AS aggregate`;
+        let sql = `SELECT ${selectSql} FROM ${this.tableName}`;
+        if (this.joins.length > 0) {
+            sql += ` ${this.joins.join(' ')}`;
+        }
+        if (this.wheres.length > 0) {
+            sql += ` WHERE ${this.compileWheres(this.wheres)}`;
+        }
+        const result = await this.connection.select(sql, this.bindings.where);
+        return parseFloat(result[0]?.aggregate || 0);
     }
     // --- Execution (Write) ---
     async insert(data) {
@@ -190,26 +199,39 @@ class QueryBuilder {
         }
         const updates = Object.keys(data).map(key => `${key} = ?`).join(', ');
         const values = Object.values(data);
-        const whereClause = this.wheres.join(' AND ');
+        const whereClause = this.compileWheres(this.wheres);
         const sql = `UPDATE ${this.tableName} SET ${updates} WHERE ${whereClause}`;
-        return this.connection.update(sql, [...values, ...this.whereBindings]);
+        return this.connection.update(sql, [...values, ...this.bindings.where]);
     }
     async delete() {
         if (this.wheres.length === 0) {
             throw new Error('Cannot delete without WHERE clause for safety!');
         }
-        const whereClause = this.wheres.join(' AND ');
+        const whereClause = this.compileWheres(this.wheres);
         const sql = `DELETE FROM ${this.tableName} WHERE ${whereClause}`;
-        return this.connection.delete(sql, this.whereBindings);
+        return this.connection.delete(sql, this.bindings.where);
     }
     // --- Helpers ---
+    compileWheres(wheres) {
+        if (wheres.length === 0)
+            return '';
+        const sql = wheres.map((where, index) => {
+            const booleanPrefix = index === 0 ? '' : `${where.boolean} `;
+            if (where.type === 'Nested' && where.query) {
+                const nestedSql = this.compileWheres(where.query.wheres);
+                return `${booleanPrefix}(${nestedSql})`;
+            }
+            return `${booleanPrefix}${where.sql}`;
+        }).join(' ');
+        return sql;
+    }
     buildSelectSQL() {
         let sql = `SELECT ${this.selects.join(', ')} FROM ${this.tableName}`;
         if (this.joins.length > 0) {
             sql += ` ${this.joins.join(' ')}`;
         }
         if (this.wheres.length > 0) {
-            sql += ` WHERE ${this.wheres.join(' AND ')}`;
+            sql += ` WHERE ${this.compileWheres(this.wheres)}`;
         }
         if (this.groupByColumns.length > 0) {
             sql += ` GROUP BY ${this.groupByColumns.join(', ')}`;
@@ -225,16 +247,6 @@ class QueryBuilder {
         }
         if (this.offsetValue !== undefined) {
             sql += ` OFFSET ${this.offsetValue}`;
-        }
-        return sql;
-    }
-    buildAggregateSQL(aggregate) {
-        let sql = `SELECT ${aggregate} FROM ${this.tableName}`;
-        if (this.joins.length > 0) {
-            sql += ` ${this.joins.join(' ')}`;
-        }
-        if (this.wheres.length > 0) {
-            sql += ` WHERE ${this.wheres.join(' AND ')}`;
         }
         return sql;
     }
