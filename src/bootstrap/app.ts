@@ -1,4 +1,5 @@
 import { Application } from "../Core/Foundation/Application";
+import { AuthMiddleware } from '../app/Http/Middleware/AuthMiddleware';
 
 
 export function app (path:string) {
@@ -8,13 +9,9 @@ export function app (path:string) {
         api: path + "/routes/api.ts",
     })
     .withMiddleware((middleware) => {
-        middleware.web([
-
-        ])
-
         middleware.alias({
-            ons: {}
-        })
+            'auth': AuthMiddleware,
+        });
     })
     .create();
 }

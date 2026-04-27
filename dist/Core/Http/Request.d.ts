@@ -30,5 +30,6 @@ export declare class Request {
      * Escape hatch: Access the raw Express Request if the developer really needs it.
      */
     express(): ExpressRequest;
+    validate(rules: Record<string, string | string[]>): Record<string, any>;
 }
 //# sourceMappingURL=Request.d.ts.map

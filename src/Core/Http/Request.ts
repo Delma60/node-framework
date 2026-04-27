@@ -1,4 +1,6 @@
 import { Request as ExpressRequest } from 'express';
+import { Validator } from '../Validation/Validator';
+import { ValidationException } from '../Foundation/Exceptions/ValidationException';
 
 export class Request {
     // We hold the original Express request privately
@@ -64,5 +66,30 @@ export class Request {
      */
     public express(): ExpressRequest {
         return this.req;
+    }
+
+    public validate(rules: Record<string, string | string[]>): Record<string, any> {
+        const payload = this.all();
+
+
+        // 1. Run the validator
+        const errors = Validator.make(payload, rules);
+
+        // 2. If there are errors, throw the exception!
+        // (Your global ExceptionHandler will catch this and send a 422 automatically)
+        if (Object.keys(errors).length > 0) {
+            throw new ValidationException(errors);
+        }
+
+        // 3. If it passes, return ONLY the data that was defined in the rules
+        // (This prevents users from injecting unwanted data into your database)
+        const validatedData: Record<string, any> = {};
+        for (const key in rules) {
+            if (payload[key] !== undefined) {
+                validatedData[key] = payload[key];
+            }
+        }
+
+        return validatedData;
     }
 }

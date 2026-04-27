@@ -6,7 +6,7 @@ const Route_1 = require("../Core/Facade/Route");
 Route_1.Route.resource("users", UserController_1.UserController);
 // Route.post("/", [UserC])
 Route_1.Route.prefix('/v1')
-    .middleware('api')
+    .middleware('auth')
     .name('api')
     .group(() => {
     // 1. Returning an Object automatically sends JSON with a 200 status
@@ -30,5 +30,9 @@ Route_1.Route.prefix('/v1')
     Route_1.Route.get('/posts', () => {
         return { posts: [{ id: 1, title: 'Hello World' }] };
     });
+    // Protected route example
+    Route_1.Route.get('/protected-dashboard', () => {
+        return { message: "You are logged in!" };
+    }).middleware('auth');
 });
 //# sourceMappingURL=api.js.map

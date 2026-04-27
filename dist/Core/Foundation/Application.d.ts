@@ -13,7 +13,7 @@ interface Interface {
     register(ProviderClass: new (app: Application) => ServiceProvider): void;
     withProviders(providers: Array<new (app: Application) => ServiceProvider>): this;
     boot(): Promise<void>;
-    withExceptions(callback: (exception: ExceptionHandler) => Promise<void> | void): this;
+    withExceptions(callback?: (exception: ExceptionHandler) => Promise<void> | void): this;
 }
 export declare class Application extends Container implements Interface {
     basePath: string;

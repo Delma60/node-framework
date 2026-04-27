@@ -1,12 +1,11 @@
-export class Middleware {
-    public web (append: Object[]) {
+    export class Middleware {
+        public aliases: Record<string, any> = {};
 
+    public web(){
+        
     }
-    public alias (middleware?: Record<string, Object>) {
-    
-
+        public alias(aliases: Record<string, any>): this {
+            this.aliases = { ...this.aliases, ...aliases };
+            return this;
+        }
     }
-}
-
-
-// export Middleware ;

@@ -1,5 +1,8 @@
 export declare class Middleware {
-    web(append: Object[]): void;
-    alias(middleware?: Record<string, Object>): void;
+    aliases: Record<string, any>;
+    /**
+     * Register route middleware aliases.
+     */
+    alias(aliases: Record<string, any>): this;
 }
 //# sourceMappingURL=Middleware.d.ts.map

@@ -139,17 +139,41 @@ class RouteServiceProvider extends ServiceProvider_1.ServiceProvider {
             // Ask the Router instance for the collection of Route objects
             const webRoutes = Route_1.Route.getRoutes();
             for (const route of webRoutes) {
-                // At this point, you could also map route.routeMiddleware into Express!
+                console.log(`Mapping [${route.method.toUpperCase()}] ${route.uri}`);
                 if (server) {
                     const method = route.method;
                     if (typeof server[method] === 'function') {
                         const rawHandler = this.resolveRouteHandler(route);
                         if (rawHandler) {
-                            // 🚀 Wrap the handler here before giving it to Express!
+                            // 1. Create the Express Handler
                             const expressHandler = this.wrapHandler(rawHandler);
-                            server[method](route.uri, expressHandler);
-                        }
-                        else {
+                            // 2. 🚀 Resolve and wrap the middlewares!
+                            const expressMiddlewares = [];
+                            if (route.routeMiddleware && route.routeMiddleware.length > 0) {
+                                // Grab the alias registry from the container
+                                const config = this.app.make('middleware');
+                                for (const alias of route.routeMiddleware) {
+                                    const MiddlewareClass = config.aliases[alias];
+                                    if (!MiddlewareClass) {
+                                        throw new Error(`Middleware alias [${alias}] has not been registered.`);
+                                    }
+                                    // Create an Express middleware wrapper
+                                    expressMiddlewares.push(async (req, res, next) => {
+                                        try {
+                                            const customRequest = new Request_1.Request(req);
+                                            const instance = new MiddlewareClass();
+                                            // Call the user's handle method!
+                                            await instance.handle(customRequest, next);
+                                        }
+                                        catch (error) {
+                                            // If the middleware throws an HttpException, pass it to the global error handler!
+                                            next(error);
+                                        }
+                                    });
+                                }
+                            }
+                            // 3. Inject the middlewares into Express BEFORE the handler
+                            server[method](route.uri, ...expressMiddlewares, expressHandler);
                         }
                     }
                 }
@@ -169,31 +193,63 @@ class RouteServiceProvider extends ServiceProvider_1.ServiceProvider {
                 if (typeof apiRouter[method] === 'function') {
                     const rawHandler = this.resolveRouteHandler(route);
                     if (rawHandler) {
-                        // 🚀 Wrap the handler here before giving it to Express!
                         const expressHandler = this.wrapHandler(rawHandler);
-                        apiRouter[method](route.uri, expressHandler);
+                        // 🚀 Resolve and wrap the middlewares for API routes!
+                        const expressMiddlewares = [];
+                        if (route.routeMiddleware && route.routeMiddleware.length > 0) {
+                            // Grab the alias registry from the container
+                            const config = this.app.make('middleware');
+                            for (const alias of route.routeMiddleware) {
+                                const MiddlewareClass = config.aliases[alias];
+                                if (!MiddlewareClass) {
+                                    throw new Error(`Middleware alias [${alias}] has not been registered.`);
+                                }
+                                // Create an Express middleware wrapper
+                                expressMiddlewares.push(async (req, res, next) => {
+                                    try {
+                                        const customRequest = new Request_1.Request(req);
+                                        const instance = new MiddlewareClass();
+                                        // Call the user's handle method!
+                                        await instance.handle(customRequest, next);
+                                    }
+                                    catch (error) {
+                                        // If the middleware throws an HttpException, pass it to the global error handler!
+                                        next(error);
+                                    }
+                                });
+                            }
+                        }
+                        // Inject the middlewares into Express BEFORE the handler
+                        apiRouter[method](route.uri, ...expressMiddlewares, expressHandler);
                     }
                     else {
                         console.warn(`Skipping API route ${route.method.toUpperCase()} /api${route.uri} because the handler is not a function.`);
                     }
                 }
             }
-            try {
-                const exceptionHandler = this.app.make('exception.handler');
-                // Express error middleware MUST have exactly 4 arguments
-                server.use((err, req, res, next) => {
-                    // 1. Log the error
-                    exceptionHandler.report(err);
-                    // 2. Send the formatted response to the user
-                    exceptionHandler.render(err, req, res);
-                });
-            }
-            catch (e) {
-                console.warn("⚠️ No exception handler registered in Application.");
-            }
             // Mount all API routes under the '/api' prefix automatically
             server.use('/api', apiRouter);
         }
+        let exceptionHandler;
+        try {
+            exceptionHandler = this.app.make('exception.handler');
+        }
+        catch (e) {
+            console.warn("⚠️ No exception handler registered in Application.");
+        }
+        // Express error middleware MUST have exactly 4 arguments
+        server.use((err, req, res, next) => {
+            if (res.headersSent) {
+                return next(err);
+            }
+            if (exceptionHandler) {
+                exceptionHandler.report(err);
+                exceptionHandler.render(err, req, res);
+                return;
+            }
+            console.error('⚠️ Unhandled exception occurred:', err);
+            res.status(500).json({ message: 'Internal Server Error' });
+        });
         server.listen(3000, () => {
             console.log('🚀 Server is running on http://localhost:3000');
         });

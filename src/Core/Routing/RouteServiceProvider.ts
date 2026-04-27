@@ -5,6 +5,7 @@ import { ServiceProvider } from '../Support/ServiceProvider';
 import { Route } from '../Facade/Route';
 import { Request as LaravelRequest } from '../Http/Request';
 import { ExceptionHandler } from '../Foundation/Exceptions/Handler';
+import { Middleware as MiddlewareConfig } from '../Foundation/Configurations/Middleware';
 
 export class RouteServiceProvider extends ServiceProvider {
     private resolveRouteFile(routePath: string): string {
@@ -116,21 +117,49 @@ export class RouteServiceProvider extends ServiceProvider {
             const webRoutes = Route.getRoutes();
 
             for (const route of webRoutes) {
+                console.log(`Mapping [${route.method.toUpperCase()}] ${route.uri}`);
                 
-                // At this point, you could also map route.routeMiddleware into Express!
-                if(server){
+                if (server) {
                     const method = route.method as keyof ExpressApp;
                     if (typeof server[method] === 'function') {
                         const rawHandler = this.resolveRouteHandler(route);
                         
                         if (rawHandler) {
-                            // 🚀 Wrap the handler here before giving it to Express!
+                            // 1. Create the Express Handler
                             const expressHandler = this.wrapHandler(rawHandler);
-                            (server[method] as any)(route.uri, expressHandler);
-                        } else {
+                            
+                            // 2. 🚀 Resolve and wrap the middlewares!
+                            const expressMiddlewares = [];
+                            if (route.routeMiddleware && route.routeMiddleware.length > 0) {
+                                // Grab the alias registry from the container
+                                const config = this.app.make<MiddlewareConfig>('middleware');
+                                
+                                for (const alias of route.routeMiddleware) {
+                                    const MiddlewareClass = config.aliases[alias];
+                                    if (!MiddlewareClass) {
+                                        throw new Error(`Middleware alias [${alias}] has not been registered.`);
+                                    }
+
+                                    // Create an Express middleware wrapper
+                                    expressMiddlewares.push(async (req: any, res: any, next: any) => {
+                                        try {
+                                            const customRequest = new LaravelRequest(req);
+                                            const instance = new MiddlewareClass();
+                                            
+                                            // Call the user's handle method!
+                                            await instance.handle(customRequest, next);
+                                        } catch (error) {
+                                            // If the middleware throws an HttpException, pass it to the global error handler!
+                                            next(error);
+                                        }
+                                    });
+                                }
+                            }
+
+                            // 3. Inject the middlewares into Express BEFORE the handler
+                            (server[method] as any)(route.uri, ...expressMiddlewares, expressHandler);
                         }
                     }
-
                 }
             }
         }
@@ -149,80 +178,80 @@ export class RouteServiceProvider extends ServiceProvider {
             const apiRouter = express.Router();
 
             for (const route of apiRoutes) {
-
                 const method = route.method as keyof typeof apiRouter;
                 if (typeof apiRouter[method] === 'function') {
                     const rawHandler = this.resolveRouteHandler(route);
-                    
                     if (rawHandler) {
-                        // 🚀 Wrap the handler here before giving it to Express!
                         const expressHandler = this.wrapHandler(rawHandler);
-                        (apiRouter[method] as any)(route.uri, expressHandler);
+                        
+                        // 🚀 Resolve and wrap the middlewares for API routes!
+                        const expressMiddlewares = [];
+                        if (route.routeMiddleware && route.routeMiddleware.length > 0) {
+                            // Grab the alias registry from the container
+                            const config = this.app.make<MiddlewareConfig>('middleware');
+                            
+                            for (const alias of route.routeMiddleware) {
+                                const MiddlewareClass = config.aliases[alias];
+                                if (!MiddlewareClass) {
+                                    throw new Error(`Middleware alias [${alias}] has not been registered.`);
+                                }
+
+                                // Create an Express middleware wrapper
+                                expressMiddlewares.push(async (req: any, res: any, next: any) => {
+                                    try {
+                                        const customRequest = new LaravelRequest(req);
+                                        const instance = new MiddlewareClass();
+                                        
+                                        // Call the user's handle method!
+                                        await instance.handle(customRequest, next);
+                                    } catch (error) {
+                                        // If the middleware throws an HttpException, pass it to the global error handler!
+                                        next(error);
+                                    }
+                                });
+                            }
+                        }
+
+                        // Inject the middlewares into Express BEFORE the handler
+                        (apiRouter[method] as any)(route.uri, ...expressMiddlewares, expressHandler);
                     } else {
                         console.warn(`Skipping API route ${route.method.toUpperCase()} /api${route.uri} because the handler is not a function.`);
                     }
                 }
             }
 
-            try {
-                const exceptionHandler = this.app.make<ExceptionHandler>('exception.handler');
-                
-                // Express error middleware MUST have exactly 4 arguments
-                server.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
-                    // 1. Log the error
-                    exceptionHandler.report(err);
-                    
-                    // 2. Send the formatted response to the user
-                    exceptionHandler.render(err, req, res);
-                });
-            } catch (e) {
-                console.warn("⚠️ No exception handler registered in Application.");
-            }
-
             // Mount all API routes under the '/api' prefix automatically
             server.use('/api', apiRouter);
         }
+
+        let exceptionHandler: ExceptionHandler | undefined;
+
+        try {
+            exceptionHandler = this.app.make<ExceptionHandler>('exception.handler');
+        } catch (e) {
+            console.warn("⚠️ No exception handler registered in Application.");
+        }
+
+        // Express error middleware MUST have exactly 4 arguments
+        server.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
+            if (res.headersSent) {
+                return next(err);
+            }
+
+            if (exceptionHandler) {
+                exceptionHandler.report(err);
+                exceptionHandler.render(err, req, res);
+                return;
+            }
+
+            console.error('⚠️ Unhandled exception occurred:', err);
+            res.status(500).json({ message: 'Internal Server Error' });
+        });
 
         server.listen(3000, () => {
             console.log('🚀 Server is running on http://localhost:3000');
         });
     }
 
-    /**
-     * Wraps the developer's route handler to automatically parse return values
-     * exactly like Laravel's Router::toResponse() method.
-     */
-    // private wrapHandler(handler: Function) {
-    //     return async (req: express.Request, res: express.Response, next: express.NextFunction) => {
-    //         try {
-    //             // 1. Execute the developer's handler and capture the return value
-    //             // We still pass req and res in case they want to use them directly
-    //             const response = await handler(req, res);
-
-    //             // 2. If the developer already sent a response manually (e.g., using res.send()), 
-    //             // we safely bail out so we don't cause an Express "headers already sent" crash.
-    //             if (res.headersSent) {
-    //                 return;
-    //             }
-
-    //             // 3. --- Response Parsing Logic ---
-    //             if (response === undefined || response === null) {
-    //                 // Empty return
-    //                 res.status(200).end();
-    //             } else if (typeof response === 'string' || typeof response === 'number' || typeof response === 'boolean') {
-    //                 // Primitives become text/html or plain text
-    //                 res.status(200).send(String(response));
-    //             } else if (typeof response === 'object') {
-    //                 // Arrays and Objects are automatically serialized to JSON!
-    //                 res.status(200).json(response);
-    //             } else {
-    //                 // Fallback
-    //                 res.status(200).send(response);
-    //             }
-    //         } catch (error) {
-    //             // If the controller throws an exception, catch it and pass it to Express's error handler
-    //             next(error);
-    //         }
-    //     };
-    // }
+   
 }

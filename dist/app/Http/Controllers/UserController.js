@@ -9,7 +9,10 @@ class UserController extends Controller_1.Controller {
         return "User index";
     }
     store(request) {
-        throw new Error("Store method not implemented yet.");
+        const data = request.validate({
+            name: 'required|string',
+        });
+        return `User created with name: ${data.name}`;
     }
 }
 exports.UserController = UserController;

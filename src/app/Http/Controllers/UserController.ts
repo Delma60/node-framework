@@ -9,6 +9,11 @@ export class UserController extends Controller {
     }
 
     public store(request: Request) {
-        throw new Error("Store method not implemented yet.");
+        const data = request.validate({
+            name: 'required|string',
+        });
+        
+
+        return `User created with name: ${data.name}`;
     }
 }

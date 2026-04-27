@@ -1,6 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Request = void 0;
+const Validator_1 = require("../Validation/Validator");
+const ValidationException_1 = require("../Foundation/Exceptions/ValidationException");
 class Request {
     // We hold the original Express request privately
     req;
@@ -57,6 +59,25 @@ class Request {
      */
     express() {
         return this.req;
+    }
+    validate(rules) {
+        const payload = this.all();
+        // 1. Run the validator
+        const errors = Validator_1.Validator.make(payload, rules);
+        // 2. If there are errors, throw the exception!
+        // (Your global ExceptionHandler will catch this and send a 422 automatically)
+        if (Object.keys(errors).length > 0) {
+            throw new ValidationException_1.ValidationException(errors);
+        }
+        // 3. If it passes, return ONLY the data that was defined in the rules
+        // (This prevents users from injecting unwanted data into your database)
+        const validatedData = {};
+        for (const key in rules) {
+            if (payload[key] !== undefined) {
+                validatedData[key] = payload[key];
+            }
+        }
+        return validatedData;
     }
 }
 exports.Request = Request;

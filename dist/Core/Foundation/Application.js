@@ -22,9 +22,11 @@ class Application extends Container_1.Container {
      * This allows: Application.configure(path).withRouting(...).create()
      */
     static configure(basePath) {
-        return (new Application(basePath)).withProviders([
+        return (new Application(basePath))
+            .withProviders([
             RouteServiceProvider_1.RouteServiceProvider,
-        ]);
+        ])
+            .withExceptions();
     }
     // --- All methods below are now INSTANCE methods ---
     withMiddleware(callback) {
@@ -32,6 +34,8 @@ class Application extends Container_1.Container {
         if (callback) {
             callback(middleware);
         }
+        // 🚀 NEW: Bind the configured middleware instance into the container!
+        this.bind('middleware', middleware);
         return this;
     }
     withExceptions(callback) {

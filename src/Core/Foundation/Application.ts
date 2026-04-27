@@ -13,7 +13,7 @@ interface Interface{
     register(ProviderClass: new (app: Application) => ServiceProvider): void;
     withProviders(providers: Array<new (app: Application) => ServiceProvider>): this;
     boot(): Promise<void>;
-    withExceptions(callback: (exception: ExceptionHandler) => Promise<void> | void): this;
+    withExceptions(callback?: (exception: ExceptionHandler) => Promise<void> | void): this;
 }
 export class Application extends Container implements Interface {
     
@@ -35,9 +35,11 @@ export class Application extends Container implements Interface {
      * This allows: Application.configure(path).withRouting(...).create()
      */
     public static configure(basePath: string): Omit<Application, 'withProviders'> {
-        return (new Application(basePath)).withProviders([
-            RouteServiceProvider,
-        ]);
+        return (new Application(basePath))
+            .withProviders([
+                RouteServiceProvider,
+            ])
+            .withExceptions();
     }
 
     // --- All methods below are now INSTANCE methods ---
@@ -47,6 +49,10 @@ export class Application extends Container implements Interface {
         if (callback) {
             callback(middleware);
         }
+        
+        // 🚀 NEW: Bind the configured middleware instance into the container!
+        this.bind('middleware', middleware);
+        
         return this;
     }
 

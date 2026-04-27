@@ -3,10 +3,12 @@ export declare class ExceptionHandler {
     /**
      * Report or log an exception.
      */
-    report(error: Error): void;
+    report(error: unknown): void;
     /**
      * Render an exception into an HTTP response.
      */
-    render(error: Error, req: ExpressRequest, res: ExpressResponse): void;
+    render(error: unknown, req: ExpressRequest, res: ExpressResponse): void;
+    private normalizeError;
+    private normalizeStatusCode;
 }
 //# sourceMappingURL=Handler.d.ts.map

@@ -1,1 +1,1 @@
-{"version":3,"file":"Middleware.d.ts","sourceRoot":"","sources":["../../../../src/Core/Foundation/Configurations/Middleware.ts"],"names":[],"mappings":"AAAA,qBAAa,UAAU;IACZ,GAAG,CAAE,MAAM,EAAE,MAAM,EAAE;IAGrB,KAAK,CAAE,UAAU,CAAC,EAAE,MAAM,CAAC,MAAM,EAAE,MAAM,CAAC;CAIpD"}
+{"version":3,"file":"Middleware.d.ts","sourceRoot":"","sources":["../../../../src/Core/Foundation/Configurations/Middleware.ts"],"names":[],"mappings":"AAAA,qBAAa,UAAU;IACZ,OAAO,EAAE,MAAM,CAAC,MAAM,EAAE,GAAG,CAAC,CAAM;IAEzC;;OAEG;IACI,KAAK,CAAC,OAAO,EAAE,MAAM,CAAC,MAAM,EAAE,GAAG,CAAC,GAAG,IAAI;CAInD"}

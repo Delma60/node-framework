@@ -6,7 +6,7 @@ import { Route } from "../Core/Facade/Route";
 Route.resource("users", UserController);
 // Route.post("/", [UserC])
 Route.prefix('/v1')
-    .middleware('api')
+    .middleware('auth')
     .name('api')
     .group(() => {
         // 1. Returning an Object automatically sends JSON with a 200 status
@@ -34,4 +34,9 @@ Route.prefix('/v1')
         Route.get('/posts', () => {
             return { posts: [{ id: 1, title: 'Hello World' }] };
         });
+
+        // Protected route example
+        Route.get('/protected-dashboard', () => {
+            return { message: "You are logged in!" };
+        }).middleware('auth');
     });
