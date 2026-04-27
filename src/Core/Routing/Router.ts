@@ -7,6 +7,8 @@ export interface GroupAttributes {
     controller?: any;
 }
 
+type OmittedFromResource = "resource"|"get"| "post" | "delete"|"put" | "patch";
+
 export class Router {
     private routes: Route[] = [];
     private groupStack: GroupAttributes[] = [];
@@ -49,7 +51,7 @@ export class Router {
         return this.addRoute('delete', uri, action);
     }
 
-    public resource(uri: string, controller: Object): void {
+    public resource(uri: string, controller: Object): Omit<this, OmittedFromResource> {
         // Define the standard CRUD routes for a resource
         this.addRoute('get', `/${uri}`, [controller, 'index']);
         this.addRoute('post', `/${uri}`, [controller, 'store']);
@@ -57,6 +59,7 @@ export class Router {
         this.addRoute('patch', `/${uri}/:id`, [controller, 'update']);
         this.addRoute('delete', `/${uri}/:id`, [controller, 'destroy']);
         // return this.routes[this.routes.length - 1];
+        return this
     }
 
     private addRoute(method: string, uri: string, action: [Object, string] | Function): Route {

@@ -131,103 +131,167 @@ class RouteServiceProvider extends ServiceProvider_1.ServiceProvider {
     async boot() {
         const server = this.app.make('router');
         const options = this.app.make('routing.options');
+        const middlewareConfig = this.app.make('middleware');
+        // 1. Apply Trusted Proxies
+        if (middlewareConfig.trustedProxies) {
+            server.set('trust proxy', middlewareConfig.trustedProxies);
+        }
         server.use(express_1.default.json());
+        const instantiateMiddleware = (MiddlewareClass) => {
+            return async (req, res, next) => {
+                try {
+                    const customRequest = new Request_1.Request(req);
+                    const instance = new MiddlewareClass();
+                    await instance.handle(customRequest, next);
+                }
+                catch (error) {
+                    next(error);
+                }
+            };
+        };
         // 3. Dynamically import and map the Web routes
+        // if (options && options.web) {
+        //     Route.clear(); 
+        //     await import(this.resolveRouteFile(options.web)); 
+        //     // Ask the Router instance for the collection of Route objects
+        //     const webRoutes = Route.getRoutes();
+        //     const webGroupMiddlewares = middlewareConfig.webGroup.map(instantiateMiddleware);
+        //     for (const route of webRoutes) {
+        //         if (server) {
+        //             const method = route.method as keyof ExpressApp;
+        //             if (typeof server[method] === 'function') {
+        //                 const rawHandler = this.resolveRouteHandler(route);
+        //                 if (rawHandler) {
+        //                     // 1. Create the Express Handler
+        //                     const expressHandler = this.wrapHandler(rawHandler);
+        //                     // 2. 🚀 Resolve and wrap the middlewares!
+        //                     const expressMiddlewares = [];
+        //                     if (route.routeMiddleware && route.routeMiddleware.length > 0) {
+        //                         // Grab the alias registry from the container
+        //                         const config = this.app.make<MiddlewareConfig>('middleware');
+        //                         for (const alias of route.routeMiddleware) {
+        //                             const MiddlewareClass = config.aliases[alias];
+        //                             if (!MiddlewareClass) {
+        //                                 throw new Error(`Middleware alias [${alias}] has not been registered.`);
+        //                             }
+        //                             // Create an Express middleware wrapper
+        //                             expressMiddlewares.push(async (req: any, res: any, next: any) => {
+        //                                 try {
+        //                                     const customRequest = new LaravelRequest(req);
+        //                                     const instance = new MiddlewareClass();
+        //                                     // Call the user's handle method!
+        //                                     await instance.handle(customRequest, next);
+        //                                 } catch (error) {
+        //                                     // If the middleware throws an HttpException, pass it to the global error handler!
+        //                                     next(error);
+        //                                 }
+        //                             });
+        //                         }
+        //                     }
+        //                     // 3. Inject the middlewares into Express BEFORE the handler
+        //                     (server[method] as any)(route.uri, ...expressMiddlewares, expressHandler);
+        //                 }
+        //             }
+        //         }
+        //     }
+        // }
         if (options && options.web) {
             Route_1.Route.clear();
             await Promise.resolve(`${this.resolveRouteFile(options.web)}`).then(s => __importStar(require(s)));
-            // Ask the Router instance for the collection of Route objects
             const webRoutes = Route_1.Route.getRoutes();
+            // 🚀 Pre-compile the Web Group Middlewares
+            const webGroupMiddlewares = middlewareConfig.webGroup.map(instantiateMiddleware);
             for (const route of webRoutes) {
-                console.log(`Mapping [${route.method.toUpperCase()}] ${route.uri}`);
-                if (server) {
-                    const method = route.method;
-                    if (typeof server[method] === 'function') {
-                        const rawHandler = this.resolveRouteHandler(route);
-                        if (rawHandler) {
-                            // 1. Create the Express Handler
-                            const expressHandler = this.wrapHandler(rawHandler);
-                            // 2. 🚀 Resolve and wrap the middlewares!
-                            const expressMiddlewares = [];
-                            if (route.routeMiddleware && route.routeMiddleware.length > 0) {
-                                // Grab the alias registry from the container
-                                const config = this.app.make('middleware');
-                                for (const alias of route.routeMiddleware) {
-                                    const MiddlewareClass = config.aliases[alias];
-                                    if (!MiddlewareClass) {
-                                        throw new Error(`Middleware alias [${alias}] has not been registered.`);
-                                    }
-                                    // Create an Express middleware wrapper
-                                    expressMiddlewares.push(async (req, res, next) => {
-                                        try {
-                                            const customRequest = new Request_1.Request(req);
-                                            const instance = new MiddlewareClass();
-                                            // Call the user's handle method!
-                                            await instance.handle(customRequest, next);
-                                        }
-                                        catch (error) {
-                                            // If the middleware throws an HttpException, pass it to the global error handler!
-                                            next(error);
-                                        }
-                                    });
-                                }
-                            }
-                            // 3. Inject the middlewares into Express BEFORE the handler
-                            server[method](route.uri, ...expressMiddlewares, expressHandler);
-                        }
+                const method = route.method;
+                if (typeof server[method] === 'function') {
+                    const rawHandler = this.resolveRouteHandler(route);
+                    if (rawHandler) {
+                        const expressHandler = this.wrapHandler(rawHandler);
+                        // Resolve route-specific aliases (e.g., ->middleware('auth'))
+                        const routeMiddlewares = (route.routeMiddleware || []).map((alias) => {
+                            const MiddlewareClass = middlewareConfig.aliases[alias];
+                            if (!MiddlewareClass)
+                                throw new Error(`Middleware alias [${alias}] not found.`);
+                            return instantiateMiddleware(MiddlewareClass);
+                        });
+                        // Inject: Group Middlewares -> Route Middlewares -> Handler
+                        server[method](route.uri, ...webGroupMiddlewares, ...routeMiddlewares, expressHandler);
                     }
                 }
             }
         }
         // 4. Dynamically import and map the API routes (with an automatic prefix!)
+        // if (options && options.api) {
+        //     // Clear any existing routes and load API routes using Route facade
+        //     Route.clear();
+        //     await import(this.resolveRouteFile(options.api));
+        //     // Get the API routes from the Route facade
+        //     const apiRoutes = Route.getRoutes();
+        //     // Create API router and apply /api prefix
+        //     const apiRouter = express.Router();
+        //     for (const route of apiRoutes) {
+        //         const method = route.method as keyof typeof apiRouter;
+        //         if (typeof apiRouter[method] === 'function') {
+        //             const rawHandler = this.resolveRouteHandler(route);
+        //             if (rawHandler) {
+        //                 const expressHandler = this.wrapHandler(rawHandler);
+        //                 // 🚀 Resolve and wrap the middlewares for API routes!
+        //                 const expressMiddlewares = [];
+        //                 if (route.routeMiddleware && route.routeMiddleware.length > 0) {
+        //                     // Grab the alias registry from the container
+        //                     const config = this.app.make<MiddlewareConfig>('middleware');
+        //                     for (const alias of route.routeMiddleware) {
+        //                         const MiddlewareClass = config.aliases[alias];
+        //                         if (!MiddlewareClass) {
+        //                             throw new Error(`Middleware alias [${alias}] has not been registered.`);
+        //                         }
+        //                         // Create an Express middleware wrapper
+        //                         expressMiddlewares.push(async (req: any, res: any, next: any) => {
+        //                             try {
+        //                                 const customRequest = new LaravelRequest(req);
+        //                                 const instance = new MiddlewareClass();
+        //                                 // Call the user's handle method!
+        //                                 await instance.handle(customRequest, next);
+        //                             } catch (error) {
+        //                                 // If the middleware throws an HttpException, pass it to the global error handler!
+        //                                 next(error);
+        //                             }
+        //                         });
+        //                     }
+        //                 }
+        //                 // Inject the middlewares into Express BEFORE the handler
+        //                 (apiRouter[method] as any)(route.uri, ...expressMiddlewares, expressHandler);
+        //             } else {
+        //                 // console.warn(`Skipping API route ${route.method.toUpperCase()} /api${route.uri} because the handler is not a function.`);
+        //             }
+        //         }
+        //     }
+        //     // Mount all API routes under the '/api' prefix automatically
+        //     server.use('/api', apiRouter);
+        // }
         if (options && options.api) {
-            // Clear any existing routes and load API routes using Route facade
             Route_1.Route.clear();
             await Promise.resolve(`${this.resolveRouteFile(options.api)}`).then(s => __importStar(require(s)));
-            // Get the API routes from the Route facade
             const apiRoutes = Route_1.Route.getRoutes();
-            // Create API router and apply /api prefix
             const apiRouter = express_1.default.Router();
+            // 🚀 Pre-compile the API Group Middlewares
+            const apiGroupMiddlewares = middlewareConfig.apiGroup.map(instantiateMiddleware);
             for (const route of apiRoutes) {
                 const method = route.method;
                 if (typeof apiRouter[method] === 'function') {
                     const rawHandler = this.resolveRouteHandler(route);
                     if (rawHandler) {
                         const expressHandler = this.wrapHandler(rawHandler);
-                        // 🚀 Resolve and wrap the middlewares for API routes!
-                        const expressMiddlewares = [];
-                        if (route.routeMiddleware && route.routeMiddleware.length > 0) {
-                            // Grab the alias registry from the container
-                            const config = this.app.make('middleware');
-                            for (const alias of route.routeMiddleware) {
-                                const MiddlewareClass = config.aliases[alias];
-                                if (!MiddlewareClass) {
-                                    throw new Error(`Middleware alias [${alias}] has not been registered.`);
-                                }
-                                // Create an Express middleware wrapper
-                                expressMiddlewares.push(async (req, res, next) => {
-                                    try {
-                                        const customRequest = new Request_1.Request(req);
-                                        const instance = new MiddlewareClass();
-                                        // Call the user's handle method!
-                                        await instance.handle(customRequest, next);
-                                    }
-                                    catch (error) {
-                                        // If the middleware throws an HttpException, pass it to the global error handler!
-                                        next(error);
-                                    }
-                                });
-                            }
-                        }
-                        // Inject the middlewares into Express BEFORE the handler
-                        apiRouter[method](route.uri, ...expressMiddlewares, expressHandler);
-                    }
-                    else {
-                        console.warn(`Skipping API route ${route.method.toUpperCase()} /api${route.uri} because the handler is not a function.`);
+                        const routeMiddlewares = (route.routeMiddleware || []).map((alias) => {
+                            const MiddlewareClass = middlewareConfig.aliases[alias];
+                            if (!MiddlewareClass)
+                                throw new Error(`Middleware alias [${alias}] not found.`);
+                            return instantiateMiddleware(MiddlewareClass);
+                        });
+                        apiRouter[method](route.uri, ...apiGroupMiddlewares, ...routeMiddlewares, expressHandler);
                     }
                 }
             }
-            // Mount all API routes under the '/api' prefix automatically
             server.use('/api', apiRouter);
         }
         let exceptionHandler;

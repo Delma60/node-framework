@@ -42,6 +42,7 @@ class Router {
         this.addRoute('patch', `/${uri}/:id`, [controller, 'update']);
         this.addRoute('delete', `/${uri}/:id`, [controller, 'destroy']);
         // return this.routes[this.routes.length - 1];
+        return this;
     }
     addRoute(method, uri, action) {
         // 1. Create the new Route instance

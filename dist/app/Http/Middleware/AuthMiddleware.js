@@ -5,6 +5,7 @@ const HttpException_1 = require("../../../Core/Foundation/Exceptions/HttpExcepti
 class AuthMiddleware {
     async handle(request, next) {
         const token = request.bearerToken();
+        console.log("Auth Middleware");
         if (token !== 'secret-token') {
             throw new HttpException_1.HttpException(401, 'Unauthenticated. Invalid token.');
         }
