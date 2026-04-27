@@ -1,11 +1,11 @@
 import { Route } from './Route';
 import { RouteRegistrar } from './RouteRegistrar';
+import { ResourceRegistrar } from './ResourceRegistrar';
 export interface GroupAttributes {
     prefix?: string;
     middleware?: string[];
     controller?: any;
 }
-type OmittedFromResource = "resource" | "get" | "post" | "delete" | "put" | "patch";
 export declare class Router {
     private routes;
     private groupStack;
@@ -17,10 +17,9 @@ export declare class Router {
     get(uri: string, action: [Object, string] | Function): Route;
     post(uri: string, action: [Object, string] | Function): Route;
     delete(uri: string, action: [Object, string] | Function): Route;
-    resource(uri: string, controller: Object): Omit<this, OmittedFromResource>;
+    resource(uri: string, controller: Object): ResourceRegistrar;
     private addRoute;
     getRoutes(): Route[];
     clear(): void;
 }
-export {};
 //# sourceMappingURL=Router.d.ts.map

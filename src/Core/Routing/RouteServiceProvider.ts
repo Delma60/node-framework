@@ -127,6 +127,12 @@ export class RouteServiceProvider extends ServiceProvider {
             };
         };
 
+        if (middlewareConfig && middlewareConfig.globalMiddlewares.length > 0) {
+            const globalMiddlewares = middlewareConfig.globalMiddlewares.map(instantiateMiddleware);
+            // server.use() attaches them globally to Express
+            server.use(...globalMiddlewares); 
+        }
+
         // 3. Dynamically import and map the Web routes
         // if (options && options.web) {
         //     Route.clear(); 

@@ -3,35 +3,28 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Middleware = void 0;
 class Middleware {
     aliases = {};
-    // Arrays to hold class references for specific route groups
     webGroup = [];
     apiGroup = [];
-    // Express trust proxy configuration
+    // 🚀 NEW: Store global middlewares here
+    globalMiddlewares = [];
     trustedProxies = false;
-    /**
-     * Register route middleware aliases.
-     */
     alias(aliases) {
         this.aliases = { ...this.aliases, ...aliases };
         return this;
     }
-    /**
-     * Append middlewares to the 'web' route group.
-     */
     web(middlewares) {
         this.webGroup.push(...middlewares);
         return this;
     }
-    /**
-     * Append middlewares to the 'api' route group.
-     */
     api(middlewares) {
         this.apiGroup.push(...middlewares);
         return this;
     }
-    /**
-     * Configure trusted proxies for the application.
-     */
+    // 🚀 NEW: Append global middleware that runs on EVERY request
+    append(middleware) {
+        this.globalMiddlewares.push(middleware);
+        return this;
+    }
     trustProxies(proxies) {
         this.trustedProxies = proxies;
         return this;

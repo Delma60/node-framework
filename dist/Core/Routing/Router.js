@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Router = void 0;
 const Route_1 = require("./Route");
 const RouteRegistrar_1 = require("./RouteRegistrar");
+const ResourceRegistrar_1 = require("./ResourceRegistrar");
 class Router {
     routes = [];
     groupStack = [];
@@ -36,13 +37,14 @@ class Router {
     }
     resource(uri, controller) {
         // Define the standard CRUD routes for a resource
-        this.addRoute('get', `/${uri}`, [controller, 'index']);
-        this.addRoute('post', `/${uri}`, [controller, 'store']);
-        this.addRoute('put', `/${uri}/:id`, [controller, 'update']);
-        this.addRoute('patch', `/${uri}/:id`, [controller, 'update']);
-        this.addRoute('delete', `/${uri}/:id`, [controller, 'destroy']);
-        // return this.routes[this.routes.length - 1];
-        return this;
+        const resourceRoutes = [
+            this.addRoute('get', `/${uri}`, [controller, 'index']),
+            this.addRoute('post', `/${uri}`, [controller, 'store']),
+            this.addRoute('put', `/${uri}/:id`, [controller, 'update']),
+            this.addRoute('patch', `/${uri}/:id`, [controller, 'update']),
+            this.addRoute('delete', `/${uri}/:id`, [controller, 'destroy']),
+        ];
+        return new ResourceRegistrar_1.ResourceRegistrar(resourceRoutes);
     }
     addRoute(method, uri, action) {
         // 1. Create the new Route instance
