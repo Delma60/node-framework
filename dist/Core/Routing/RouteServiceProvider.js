@@ -73,12 +73,10 @@ class RouteServiceProvider extends ServiceProvider_1.ServiceProvider {
                 const instance = new controller();
                 handler = instance[action] ?? controller[action];
                 if (typeof handler === 'function') {
-                    console.log("object");
                     context = instance;
                 }
             }
             else if (controller && typeof controller === 'object') {
-                console.log("object");
                 handler = controller[action];
             }
             if (typeof handler === 'function') {
@@ -179,6 +177,19 @@ class RouteServiceProvider extends ServiceProvider_1.ServiceProvider {
                         console.warn(`Skipping API route ${route.method.toUpperCase()} /api${route.uri} because the handler is not a function.`);
                     }
                 }
+            }
+            try {
+                const exceptionHandler = this.app.make('exception.handler');
+                // Express error middleware MUST have exactly 4 arguments
+                server.use((err, req, res, next) => {
+                    // 1. Log the error
+                    exceptionHandler.report(err);
+                    // 2. Send the formatted response to the user
+                    exceptionHandler.render(err, req, res);
+                });
+            }
+            catch (e) {
+                console.warn("⚠️ No exception handler registered in Application.");
             }
             // Mount all API routes under the '/api' prefix automatically
             server.use('/api', apiRouter);

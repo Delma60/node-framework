@@ -3,7 +3,8 @@ import { Route } from "../Core/Facade/Route";
 
 // API routes with fluent grouping syntax and Laravel-style return values
 
-Route.get("/", [UserController, 'index']);
+Route.resource("users", UserController);
+// Route.post("/", [UserC])
 Route.prefix('/v1')
     .middleware('api')
     .name('api')

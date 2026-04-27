@@ -5,6 +5,7 @@ exports.Application = void 0;
 const RouteServiceProvider_1 = require("../Routing/RouteServiceProvider");
 const Middleware_1 = require("./Configurations/Middleware");
 const Container_1 = require("./Container");
+const Handler_1 = require("./Exceptions/Handler");
 class Application extends Container_1.Container {
     // Instance properties, not static!
     basePath;
@@ -33,12 +34,22 @@ class Application extends Container_1.Container {
         }
         return this;
     }
+    withExceptions(callback) {
+        // 1. Create the default exception handler
+        const handler = new Handler_1.ExceptionHandler();
+        // 2. If the developer wants to add custom logic later, they can use the callback
+        if (callback) {
+            callback(handler);
+        }
+        // 3. Bind it to the container so the Router can grab it later
+        this.bind('exception.handler', handler);
+        return this;
+    }
     withRouting(options) {
         this.bind('routing.options', options);
         return this;
     }
     create() {
-        console.log(`✅ Application built with base path: ${this.basePath}`);
         this.boot();
         return this;
     }
@@ -50,20 +61,16 @@ class Application extends Container_1.Container {
     }
     withProviders(providers) {
         for (const ProviderClass of providers) {
-            console.log(`Registering provider: ${ProviderClass.name}`);
             this.register(ProviderClass);
         }
         return this;
     }
     async boot() {
-        console.log(`🚀 Booting application...`);
         for (const provider of this.providers) {
-            console.log(`Booting provider: ${provider.constructor.name}`);
             if (provider.boot) {
                 await provider.boot();
             }
         }
-        console.log("🚀 Application booted successfully.");
     }
 }
 exports.Application = Application;

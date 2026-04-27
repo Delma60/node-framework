@@ -7,4 +7,8 @@ export class UserController extends Controller {
         // console.log({ all })
         return "User index";
     }
+
+    public store(request: Request) {
+        throw new Error("Store method not implemented yet.");
+    }
 }

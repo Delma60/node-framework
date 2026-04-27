@@ -4,6 +4,7 @@ import path from 'path';
 import { ServiceProvider } from '../Support/ServiceProvider';
 import { Route } from '../Facade/Route';
 import { Request as LaravelRequest } from '../Http/Request';
+import { ExceptionHandler } from '../Foundation/Exceptions/Handler';
 
 export class RouteServiceProvider extends ServiceProvider {
     private resolveRouteFile(routePath: string): string {
@@ -42,11 +43,9 @@ export class RouteServiceProvider extends ServiceProvider {
                 const instance = new controller();
                 handler = instance[action] ?? controller[action];
                 if (typeof handler === 'function') {
-                    console.log("object")
                     context = instance;
                 }
             } else if (controller && typeof controller === 'object') {
-                console.log("object")
                 handler = controller[action];
             }
 
@@ -163,6 +162,21 @@ export class RouteServiceProvider extends ServiceProvider {
                         console.warn(`Skipping API route ${route.method.toUpperCase()} /api${route.uri} because the handler is not a function.`);
                     }
                 }
+            }
+
+            try {
+                const exceptionHandler = this.app.make<ExceptionHandler>('exception.handler');
+                
+                // Express error middleware MUST have exactly 4 arguments
+                server.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
+                    // 1. Log the error
+                    exceptionHandler.report(err);
+                    
+                    // 2. Send the formatted response to the user
+                    exceptionHandler.render(err, req, res);
+                });
+            } catch (e) {
+                console.warn("⚠️ No exception handler registered in Application.");
             }
 
             // Mount all API routes under the '/api' prefix automatically

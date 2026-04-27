@@ -49,6 +49,16 @@ export class Router {
         return this.addRoute('delete', uri, action);
     }
 
+    public resource(uri: string, controller: Object): void {
+        // Define the standard CRUD routes for a resource
+        this.addRoute('get', `/${uri}`, [controller, 'index']);
+        this.addRoute('post', `/${uri}`, [controller, 'store']);
+        this.addRoute('put', `/${uri}/:id`, [controller, 'update']);
+        this.addRoute('patch', `/${uri}/:id`, [controller, 'update']);
+        this.addRoute('delete', `/${uri}/:id`, [controller, 'destroy']);
+        // return this.routes[this.routes.length - 1];
+    }
+
     private addRoute(method: string, uri: string, action: [Object, string] | Function): Route {
         // 1. Create the new Route instance
         const route = new Route(method, uri, action);

@@ -34,6 +34,15 @@ class Router {
     delete(uri, action) {
         return this.addRoute('delete', uri, action);
     }
+    resource(uri, controller) {
+        // Define the standard CRUD routes for a resource
+        this.addRoute('get', `/${uri}`, [controller, 'index']);
+        this.addRoute('post', `/${uri}`, [controller, 'store']);
+        this.addRoute('put', `/${uri}/:id`, [controller, 'update']);
+        this.addRoute('patch', `/${uri}/:id`, [controller, 'update']);
+        this.addRoute('delete', `/${uri}/:id`, [controller, 'destroy']);
+        // return this.routes[this.routes.length - 1];
+    }
     addRoute(method, uri, action) {
         // 1. Create the new Route instance
         const route = new Route_1.Route(method, uri, action);

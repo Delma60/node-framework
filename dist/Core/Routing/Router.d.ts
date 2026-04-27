@@ -16,6 +16,7 @@ export declare class Router {
     get(uri: string, action: [Object, string] | Function): Route;
     post(uri: string, action: [Object, string] | Function): Route;
     delete(uri: string, action: [Object, string] | Function): Route;
+    resource(uri: string, controller: Object): void;
     private addRoute;
     getRoutes(): Route[];
     clear(): void;
