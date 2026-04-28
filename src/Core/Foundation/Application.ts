@@ -1,15 +1,17 @@
 // src/foundation/Application.ts
 import { RouteServiceProvider } from "../Routing/RouteServiceProvider";
+import { DatabaseServiceProvider } from "../Database/DatabaseServiceProvider";
 import { ServiceProvider } from "../Support/ServiceProvider";
 import { Middleware } from "./Configurations/Middleware";
 import { Container } from "./Container";
 import { ExceptionHandler } from "./Exceptions/Handler";
+import { Facade } from "../Facade/Facade";
 
 interface Interface{
     basePath: string;
     withMiddleware(callback?: (middleware: Middleware) => Promise<void> | void): this;
     withRouting(options: { web?: string, api?: string }): this;
-    create(): this;
+    create(): Promise<Application>;
     register(ProviderClass: new (app: Application) => ServiceProvider): void;
     withProviders(providers: Array<new (app: Application) => ServiceProvider>): this;
     boot(): Promise<void>;
@@ -35,9 +37,15 @@ export class Application extends Container implements Interface {
      * This allows: Application.configure(path).withRouting(...).create()
      */
     public static configure(basePath: string): Omit<Application, 'withProviders'> {
-        return (new Application(basePath))
+        const app = new Application(basePath);
+        
+        // 🚀 Give the Facade system access to this container instance!
+        Facade.setFacadeApplication(app);
+        
+        return app
             .withProviders([
                 RouteServiceProvider,
+                DatabaseServiceProvider,
             ])
             .withExceptions();
     }
@@ -78,8 +86,8 @@ export class Application extends Container implements Interface {
         return this; 
     }
 
-    public create(): this {
-        this.boot()
+    public async create(): Promise<this> {
+        await this.boot();
         return this;
     }
 

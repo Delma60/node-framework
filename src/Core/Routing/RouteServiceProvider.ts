@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { ServiceProvider } from '../Support/ServiceProvider';
 import { Route } from '../Facade/Route';
+import { Router } from './Router';
 import { Request as LaravelRequest } from '../Http/Request';
 import { ExceptionHandler } from '../Foundation/Exceptions/Handler';
 import { Middleware as MiddlewareConfig } from '../Foundation/Configurations/Middleware';
@@ -99,11 +100,15 @@ export class RouteServiceProvider extends ServiceProvider {
     }
     
     public register(): void {
-        this.app.bind('router', express());
+        // 🚀 Bind the Router instance so facades can resolve it
+        this.app.bind('router', new Router());
+        
+        // Also bind the Express server for internal use during boot
+        this.app.bind('express.app', express());
     }
 
     public async boot(): Promise<void> {
-        const server = this.app.make<ExpressApp>('router');
+        const server = this.app.make<ExpressApp>('express.app');
         const options = this.app.make<any>('routing.options');
 
         const middlewareConfig = this.app.make<MiddlewareConfig>('middleware');

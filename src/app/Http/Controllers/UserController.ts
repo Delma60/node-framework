@@ -1,11 +1,13 @@
+import { DB } from "../../../Core/Facade/DB";
 import { Request } from "../../../Core/Http/Request";
 import { Controller } from "./Controller";
 
 export class UserController extends Controller {
-    public index(request: Request) {
+    public async index(request: Request) {
         const all = request.all()
         // console.log({ all })
-        return "User index";
+        const users = await DB.table('users').get();
+        return users;
     }
 
     public store(request: Request) {

@@ -1,12 +1,14 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.UserController = void 0;
+const DB_1 = require("../../../Core/Facade/DB");
 const Controller_1 = require("./Controller");
 class UserController extends Controller_1.Controller {
-    index(request) {
+    async index(request) {
         const all = request.all();
         // console.log({ all })
-        return "User index";
+        const users = await DB_1.DB.table('users').get();
+        return users;
     }
     store(request) {
         const data = request.validate({

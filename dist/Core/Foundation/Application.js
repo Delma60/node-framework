@@ -3,9 +3,11 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Application = void 0;
 // src/foundation/Application.ts
 const RouteServiceProvider_1 = require("../Routing/RouteServiceProvider");
+const DatabaseServiceProvider_1 = require("../Database/DatabaseServiceProvider");
 const Middleware_1 = require("./Configurations/Middleware");
 const Container_1 = require("./Container");
 const Handler_1 = require("./Exceptions/Handler");
+const Facade_1 = require("../Facade/Facade");
 class Application extends Container_1.Container {
     // Instance properties, not static!
     basePath;
@@ -22,9 +24,13 @@ class Application extends Container_1.Container {
      * This allows: Application.configure(path).withRouting(...).create()
      */
     static configure(basePath) {
-        return (new Application(basePath))
+        const app = new Application(basePath);
+        // 🚀 Give the Facade system access to this container instance!
+        Facade_1.Facade.setFacadeApplication(app);
+        return app
             .withProviders([
             RouteServiceProvider_1.RouteServiceProvider,
+            DatabaseServiceProvider_1.DatabaseServiceProvider,
         ])
             .withExceptions();
     }
@@ -53,8 +59,8 @@ class Application extends Container_1.Container {
         this.bind('routing.options', options);
         return this;
     }
-    create() {
-        this.boot();
+    async create() {
+        await this.boot();
         return this;
     }
     register(ProviderClass) {

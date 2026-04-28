@@ -9,7 +9,7 @@ interface Interface {
         web?: string;
         api?: string;
     }): this;
-    create(): this;
+    create(): Promise<Application>;
     register(ProviderClass: new (app: Application) => ServiceProvider): void;
     withProviders(providers: Array<new (app: Application) => ServiceProvider>): this;
     boot(): Promise<void>;
@@ -30,7 +30,7 @@ export declare class Application extends Container implements Interface {
         web?: string;
         api?: string;
     }): this;
-    create(): this;
+    create(): Promise<this>;
     register(ProviderClass: new (app: Application) => ServiceProvider): void;
     withProviders(providers: Array<new (app: Application) => ServiceProvider>): this;
     boot(): Promise<void>;

@@ -41,6 +41,7 @@ const express_1 = __importDefault(require("express"));
 const fs_1 = __importDefault(require("fs"));
 const ServiceProvider_1 = require("../Support/ServiceProvider");
 const Route_1 = require("../Facade/Route");
+const Router_1 = require("./Router");
 const Request_1 = require("../Http/Request");
 class RouteServiceProvider extends ServiceProvider_1.ServiceProvider {
     resolveRouteFile(routePath) {
@@ -126,10 +127,13 @@ class RouteServiceProvider extends ServiceProvider_1.ServiceProvider {
         };
     }
     register() {
-        this.app.bind('router', (0, express_1.default)());
+        // 🚀 Bind the Router instance so facades can resolve it
+        this.app.bind('router', new Router_1.Router());
+        // Also bind the Express server for internal use during boot
+        this.app.bind('express.app', (0, express_1.default)());
     }
     async boot() {
-        const server = this.app.make('router');
+        const server = this.app.make('express.app');
         const options = this.app.make('routing.options');
         const middlewareConfig = this.app.make('middleware');
         // 1. Apply Trusted Proxies
