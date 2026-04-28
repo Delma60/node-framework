@@ -10,6 +10,7 @@ export declare class MySqlConnection extends Connection {
     beginTransaction(): Promise<void>;
     commit(): Promise<void>;
     rollBack(): Promise<void>;
+    getRawConnection(): any;
     private logQuery;
 }
 //# sourceMappingURL=MySqlConnection.d.ts.map

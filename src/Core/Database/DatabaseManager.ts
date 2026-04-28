@@ -38,6 +38,14 @@ export class DatabaseManager {
         }
     }
 
+    public driver(name?: string): Connection {
+        return this.connection(name);
+    }
+
+    public connect(name?: string): Connection {
+        return this.connection(name);
+    }
+
     public table(table: string) {
         return this.connection().table(table);
     }

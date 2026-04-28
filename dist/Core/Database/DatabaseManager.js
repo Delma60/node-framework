@@ -31,6 +31,12 @@ class DatabaseManager {
                 throw new Error(`Unsupported database driver [${dbConfig.driver}].`);
         }
     }
+    driver(name) {
+        return this.connection(name);
+    }
+    connect(name) {
+        return this.connection(name);
+    }
     table(table) {
         return this.connection().table(table);
     }

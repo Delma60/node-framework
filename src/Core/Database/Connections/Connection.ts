@@ -15,6 +15,12 @@ export abstract class Connection {
         return new QueryBuilder(this as any).table(table);
     }
 
+    public getDriverName(): string {
+        return this.config.driver;
+    }
+
+    public abstract getRawConnection(): any;
+
     public abstract query(sql: string, bindings?: any[]): Promise<any>;
     public abstract select(sql: string, bindings?: any[]): Promise<any[]>;
     public abstract insert(sql: string, bindings?: any[]): Promise<number>;

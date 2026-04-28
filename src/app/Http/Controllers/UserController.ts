@@ -5,8 +5,7 @@ import { Controller } from "./Controller";
 export class UserController extends Controller {
     public async index(request: Request) {
         const all = request.all()
-        // console.log({ all })
-        const users = await DB.table('users').get();
+        const users = await DB.table('users').first();
         return users;
     }
 

@@ -7,6 +7,8 @@ export declare abstract class Connection {
      * Begin a fluent query against a database table.
      */
     table(table: string): QueryBuilder;
+    getDriverName(): string;
+    abstract getRawConnection(): any;
     abstract query(sql: string, bindings?: any[]): Promise<any>;
     abstract select(sql: string, bindings?: any[]): Promise<any[]>;
     abstract insert(sql: string, bindings?: any[]): Promise<number>;

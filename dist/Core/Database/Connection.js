@@ -4,14 +4,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Connection = void 0;
+const Connection_1 = require("./Connections/Connection");
 const promise_1 = __importDefault(require("mysql2/promise"));
-class Connection {
+class Connection extends Connection_1.Connection {
     pool;
-    inTransaction = false;
-    config;
     // 🚀 NEW: Accept the specific connection config (e.g., the mysql object)
     constructor(config) {
-        this.config = config;
+        super(config);
         console.log(`🔌 [DB] Initialized ${this.config.driver} connection to ${this.config.host || this.config.database}`);
         if (config.driver === 'mysql') {
             this.pool = promise_1.default.createPool({
@@ -77,6 +76,12 @@ class Connection {
         console.log(`🐘 [DB Transaction]: ROLLBACK`);
         this.inTransaction = false;
         // await this.pool.query('ROLLBACK');
+    }
+    getDriverName() {
+        return this.config.driver;
+    }
+    getRawConnection() {
+        return this.pool;
     }
     // --- Helpers ---
     logQuery(sql, bindings) {

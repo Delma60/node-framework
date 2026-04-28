@@ -64,6 +64,9 @@ class MySqlConnection extends Connection_1.Connection {
         console.log('🐘 [DB Transaction]: ROLLBACK');
         this.inTransaction = false;
     }
+    getRawConnection() {
+        return this.pool;
+    }
     logQuery(sql, bindings) {
         let logQuery = sql;
         bindings.forEach(binding => {

@@ -12,6 +12,9 @@ export class Database extends QueryBuilder {
         super(Database.sharedConnection);
     }
 
+
+    
+
     /**
      * 🚀 NEW: Initialize the master connection. Called by the Service Provider.
      */

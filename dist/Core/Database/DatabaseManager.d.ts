@@ -5,6 +5,8 @@ export declare class DatabaseManager {
     constructor(config: any);
     connection(name?: string): Connection;
     protected makeConnection(name: string): Connection;
+    driver(name?: string): Connection;
+    connect(name?: string): Connection;
     table(table: string): import("./QueryBuilder").QueryBuilder;
     query(sql: string, bindings?: any[]): Promise<any>;
     select(sql: string, bindings?: any[]): Promise<any[]>;

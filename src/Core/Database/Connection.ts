@@ -1,13 +1,12 @@
+import { Connection as BaseConnection } from './Connections/Connection';
 import mysql from 'mysql2/promise';
 
-export class Connection {
+export class Connection extends BaseConnection {
     private pool: any;
-    private inTransaction: boolean = false;
-    private config: any;
 
     // 🚀 NEW: Accept the specific connection config (e.g., the mysql object)
     constructor(config: any) {
-        this.config = config;
+        super(config);
         
         console.log(`🔌 [DB] Initialized ${this.config.driver} connection to ${this.config.host || this.config.database}`);
 
@@ -84,6 +83,14 @@ export class Connection {
         console.log(`🐘 [DB Transaction]: ROLLBACK`);
         this.inTransaction = false;
         // await this.pool.query('ROLLBACK');
+    }
+
+    public getDriverName(): string {
+        return this.config.driver;
+    }
+
+    public getRawConnection(): any {
+        return this.pool;
     }
 
     // --- Helpers ---

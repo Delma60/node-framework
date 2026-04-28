@@ -1,7 +1,6 @@
-export declare class Connection {
+import { Connection as BaseConnection } from './Connections/Connection';
+export declare class Connection extends BaseConnection {
     private pool;
-    private inTransaction;
-    private config;
     constructor(config: any);
     /**
      * The master query executor. All specific methods flow through here.
@@ -14,6 +13,8 @@ export declare class Connection {
     beginTransaction(): Promise<void>;
     commit(): Promise<void>;
     rollBack(): Promise<void>;
+    getDriverName(): string;
+    getRawConnection(): any;
     private logQuery;
 }
 //# sourceMappingURL=Connection.d.ts.map

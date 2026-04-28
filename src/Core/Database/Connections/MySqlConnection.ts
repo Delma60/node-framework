@@ -72,6 +72,10 @@ export class MySqlConnection extends Connection {
         this.inTransaction = false;
     }
 
+    public getRawConnection(): any {
+        return this.pool;
+    }
+
     private logQuery(sql: string, bindings: any[]): void {
         let logQuery = sql;
         bindings.forEach(binding => {

@@ -6,8 +6,7 @@ const Controller_1 = require("./Controller");
 class UserController extends Controller_1.Controller {
     async index(request) {
         const all = request.all();
-        // console.log({ all })
-        const users = await DB_1.DB.table('users').get();
+        const users = await DB_1.DB.table('users').first();
         return users;
     }
     store(request) {

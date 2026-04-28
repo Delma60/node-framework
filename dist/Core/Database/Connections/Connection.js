@@ -14,6 +14,9 @@ class Connection {
     table(table) {
         return new QueryBuilder_1.QueryBuilder(this).table(table);
     }
+    getDriverName() {
+        return this.config.driver;
+    }
 }
 exports.Connection = Connection;
 //# sourceMappingURL=Connection.js.map
